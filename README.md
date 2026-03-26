@@ -1,8 +1,7 @@
-# pvetoosl
+## pvetoos 配置、备份、恢复
 #在pve中添加計畫任務  
-# crontab -e,添加这一行：
-
 ```
+crontab -e #添加下面一行
 0 3 * * 3 /usr/local/bin/pvebackup.sh
 ```
 
