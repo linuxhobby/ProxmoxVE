@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# PVE 配置文件备份 #
 # ========== 配置 ==========
 BACKUP_DIR="/var/lib/vz/dump/"   # 备份存放目录，按需修改
 KEEP_DAYS=30                           # 保留天数
