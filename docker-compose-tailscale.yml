@@ -12,4 +12,4 @@ services:
     environment:
       - TS_AUTH_KEY=XXXXXXXXXXXXXXXXXXXXXXXX           #tailscale申请key
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_EXTRA_ARGS=--advertise-exit-node --advertise-routes=192.168.0.0/16 --accept-dns=true
+      - TS_EXTRA_ARGS=--advertise-exit-node --advertise-routes=192.168.0.0/16 #--accept-dns=true #一般不建议用
