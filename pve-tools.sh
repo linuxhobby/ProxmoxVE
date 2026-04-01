@@ -71,6 +71,7 @@ CT_MIRROR_USTC="https://mirrors.ustc.edu.cn/proxmox"
 CT_MIRROR_TUNA="https://mirrors.tuna.tsinghua.edu.cn/proxmox"
 CT_MIRROR_OFFICIAL="http://download.proxmox.com"
 
+
 # 自动更新网络检测配置
 CF_TRACE_URL="https://www.cloudflare.com/cdn-cgi/trace"
 GITHUB_MIRROR_PREFIX="https://ghfast.top/"

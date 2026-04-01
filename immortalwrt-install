@@ -2,8 +2,7 @@ immortalWRT安装配置
 一、安装  
 1、在pve中建立bridge-vmr1、2、3  （这个很重要）
 2、加载镜像  
-qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-generic-generic-ext4-combined-efi.img local-lvm  
-qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-24.10.1-x86-64-generic-ext4-combined-efi.img local-lvm  
+qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-generic-ext4-combined-efi.img local-lvm
 
 二、修改/etc/config/network，lan ip=192.168.2.1  
 
