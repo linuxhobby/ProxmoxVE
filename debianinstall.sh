@@ -229,13 +229,18 @@ fi
 
 # --- 7. 主机名 ---
 if [[ "${SELECTED[6]}" == "1" ]]; then
-    echo -e "\n${CYAN}[INPUT]${NC} 请输入新的主机名:"
+    echo -e "\n${CYAN}[INPUT]${NC} 请输入新的主机名(Hostname):"
     read -r NEW_HOSTNAME
     if [[ -n "$NEW_HOSTNAME" ]]; then
         OLD_HOSTNAME=$(hostname)
+        info "正在修改主机名: ${YELLOW}$OLD_HOSTNAME${NC} -> ${GREEN}$NEW_HOSTNAME${NC} ..."
+        # 永久修改主机名
         hostnamectl set-hostname "$NEW_HOSTNAME"
+        # 修改 /etc/hosts 确保解析正确
         sed -i "s/$OLD_HOSTNAME/$NEW_HOSTNAME/g" /etc/hosts
         success "主机名已修改为: $NEW_HOSTNAME"
+        # 增加重启提示
+        echo -e "${YELLOW}${BOLD}[!] 提示: 主机名已更改，部分服务需重启后才能识别新名称，建议稍后重启系统。${NC}"
         SUMMARY+=("  主机名          : $OLD_HOSTNAME -> $NEW_HOSTNAME")
     else
         SUMMARY+=("  主机名          : 未修改（输入为空）")
