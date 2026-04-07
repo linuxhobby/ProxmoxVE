@@ -77,7 +77,7 @@ while true; do
                 break
             fi
             ;;
-        a|A) SELECTED=(1 1 1 1 1 1 1) ;;
+        a|A) SELECTED=(1 1 1 1 1 1 0) ;;
         n|N) SELECTED=(0 0 0 0 0 0 0) ;;
         q|Q)
             clear
