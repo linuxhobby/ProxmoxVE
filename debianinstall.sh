@@ -36,7 +36,7 @@ MENU_ITEMS=(
     "安装 Docker（官方源 + 清华镜像加速）"
     "修改主机名称（Hostname）"
 )
-# 默认全不选
+# 默认全不选，增加选项需要修改这里
 SELECTED=(0 0 0 0 0 0 0)
 
 print_menu() {
