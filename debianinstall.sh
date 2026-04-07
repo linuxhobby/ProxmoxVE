@@ -46,7 +46,7 @@ print_menu() {
     clear
     echo -e "\n${BOLD}=====================================================${NC}"
     echo -e "${BOLD}   Debian 13 初始化脚本 — 选择要执行的功能${NC}"
-    echo -e "${BOLD}   作者：marco.chan  |  更新：2026/04/07${NC}"
+    echo -e "${BOLD}   作者：marco.chan${NC}"
     echo -e "${BOLD}   更新：2026/04/07${NC}"    
     echo -e "${BOLD}=====================================================${NC}"
     echo -e "  ${GREEN}输入序号切换选中/取消，a=全选，n=全不选，回车确认执行${NC}\n"
@@ -61,7 +61,7 @@ print_menu() {
     echo ""
     echo -e "  ${GREEN}a${NC} 全选   ${GREEN}n${NC} 全不选   ${RED}q${NC} 退出   ${CYAN}回车${NC} 开始执行"
     echo -e "${BOLD}=====================================================${NC}"
-    echo -n "  请输入: "
+    echo -n "  请输入序列号，然后回车（ENTER）: "
 }
 
 # 菜单交互循环
