@@ -75,14 +75,14 @@ while true; do
                 break
             fi
             ;;
-        a|A) SELECTED=(1 1 1 1 1 1) ;;
-        n|N) SELECTED=(0 0 0 0 0 0) ;;
+        a|A) SELECTED=(1 1 1 1 1 1 1) ;;
+        n|N) SELECTED=(0 0 0 0 0 0 0) ;;
         q|Q)
             clear
             echo -e "\n  ${RED}已退出，未执行任何操作。${NC}\n"
             exit 0
             ;;
-        [1-6])
+        [1-7])
             idx=$((input - 1))
             [[ "${SELECTED[$idx]}" == "1" ]] && SELECTED[$idx]=0 || SELECTED[$idx]=1
             ;;
