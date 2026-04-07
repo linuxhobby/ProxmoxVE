@@ -22,7 +22,7 @@ echo -e "${BLUE}${BOLD}>>> 开始执行系统初始化...${NC}"
 
 # 1. 安装基础工具
 echo -e "${YELLOW}>>> 2. 正在安装工具 (net-tools, vnstat, vim, curl)...${NC}"
-apt-get install -y net-tools vnstat vim curl wget systemd-timesyncd
+apt-get install -y net-tools vnstat vim wget systemd-timesyncd
 echo -e "${GREEN}>>> 工具安装完毕。${NC}"
 
 
@@ -56,3 +56,6 @@ fi
 
 
 echo -e "${BLUE}${BOLD}>>> 所有任务执行完毕，系统已配置完成。${NC}"
+echo -e "${BLUE}${BOLD}>>> 下面开始执行v2ray一键安装脚本。${NC}"
+
+bash <(wget -qO- -o- https://github.com/233boy/v2ray/raw/master/install.sh)
