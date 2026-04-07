@@ -1,6 +1,6 @@
 #!/bin/bash
 # PVE 9.0 精简工具 - 只保留4个核心功能
-# 使用前备份重要文件！
+# 原版在这里：https://github.com/Mapleawaa/PVE-Tools-9！
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
