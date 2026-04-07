@@ -116,7 +116,7 @@ if [[ "${SELECTED[0]}" == "1" ]]; then
 else
     warn "跳过：设置时区"
     SUMMARY+=("  时区        : 未修改（跳过）")
-fiDe
+fi
 
 # ==============================================================
 #  2. Locale
@@ -354,10 +354,10 @@ if [[ "${SELECTED[6]}" == "1" ]]; then
         SUMMARY+=("  主机名          : $OLD_HOSTNAME -> $NEW_HOSTNAME")
     else
         warn "输入为空，跳过修改"
-        SUMMARY+=("  主机名        : 未修改（输入为空）")
+        SUMMARY+=("  主机名          : 未修改（输入为空）")
     fi
 else
-    SUMMARY+=("  主机名      : 未修改（跳过）")
+    SUMMARY+=("  主机名          : 未修改（跳过）")
 fi
 
 
