@@ -87,7 +87,7 @@ while true; do
             [[ "${SELECTED[$idx]}" == "1" ]] && SELECTED[$idx]=0 || SELECTED[$idx]=1
             ;;
         *)
-            echo -e "\n  ${YELLOW}[WARN]${NC}  无效输入，请输入 1-6 / a / n / q / 回车"
+            echo -e "\n  ${YELLOW}[WARN]${NC}  无效输入，请输入 1-7 / a / n / q / 回车"
             sleep 1
             ;;
     esac
