@@ -1,1 +1,5 @@
 *.txt
+/v2ray
+v2ray/install.sh
+*.sh
+immortalwrt-install.txt

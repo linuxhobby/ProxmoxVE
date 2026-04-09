@@ -9,9 +9,30 @@ qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-generic-ext4-
 三、修改源：sed -e 's,https://downloads.immortalwrt.org,https://mirrors.zju.edu.cn/immortalwrt,g' \  
     -e 's,https://mirrors.vsean.net/openwrt,https://mirrors.zju.edu.cn/immortalwrt,g' \  
     -i.bak /etc/opkg/distfeeds.conf  
+    
+    修改源（主路由）
+src/gz immortalwrt_core https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/targets/x86/64/packages
+src/gz immortalwrt_base https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/base
+src/gz immortalwrt_kmods https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/targets/x86/64/kmods/5.15.195-1-b43b3018862131fe596535b496468fb0
+src/gz immortalwrt_luci https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/luci
+src/gz immortalwrt_packages https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/packages
+src/gz immortalwrt_routing https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/routing
+src/gz immortalwrt_telephony https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/telephony
+    
+    
 四、开启防火墙  
 五、安装主题、安装透明代理  
-opkg install ipset ipt2socks iptables iptables-mod-conntrack-extra iptables-mod-iprange iptables-mod-socket iptables-mod-tproxy kmod-ipt-nat luci-theme-argon  
+opkg update
+opkg install ipset ipt2socks iptables iptables-mod-conntrack-extra iptables-mod-iprange iptables-mod-socket iptables-mod-tproxy kmod-ipt-nat
+
+opkg update
+opkg install luci-theme-argon  
+ 
+opkg update
+opkg install usbutils
+ 
+opkg update
+opkg install kmod-rtl8192cu wpad-openssl
 
 七、安装passwall  
 1、新增节点  
@@ -23,3 +44,30 @@ opkg install kmod-tcp-bbr
 modprobe tcp_bbr  
 echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf  
 echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf sysctl -p  
+
+##### 检测
+sysctl net.ipv4.ip_forward
+sysctl net.ipv6.conf.all.forwarding
+sysctl net.ipv4.tcp_congestion_control
+
+####### 防火墙 #######
+# 1. 修改 synflood 变量名
+uci set firewall.@defaults[0].synflood_protect='1'
+uci delete firewall.@defaults[0].syn_flood
+
+# 2. 在 WAN 区域增加 wwan 接口
+uci set firewall.@zone[1].network='wan wan6 wwan'
+
+# 3. 添加 Tailscale P2P 规则
+# 先检查是否已经存在同名规则，避免重复添加
+uci add firewall rule
+uci set firewall.@rule[-1].name='Tailscale-P2P'
+uci set firewall.@rule[-1].src='wan'
+uci set firewall.@rule[-1].dest='lan'
+uci set firewall.@rule[-1].dest_port='41641'
+uci set firewall.@rule[-1].proto='udp'
+uci set firewall.@rule[-1].target='ACCEPT'
+
+# 4. 提交修改并重启防火墙
+uci commit firewall
+/etc/init.d/firewall restart
