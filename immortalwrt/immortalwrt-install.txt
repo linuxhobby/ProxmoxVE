@@ -2,7 +2,7 @@ immortalWRT安装配置
 一、安装  
 1、在pve中建立bridge-vmr1、2、3  （这个很重要）
 2、加载镜像  
-qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-generic-ext4-combined-efi.img local-lvm
+qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-64-generic-ext4-combined-efi.img local-lvm
 
 qm importdisk 900 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-64-generic-ext4-combined-efi-2g-swap.img local-lvm
 
@@ -27,16 +27,15 @@ chmod 600 /overlay/swapfile
 mkswap /overlay/swapfile
 swapon /overlay/swapfile
 sed -i '/^exit 0/i swapon /overlay/swapfile' /etc/rc.local
-  
+reboot
+
 五、安装各种插件和工具  
 opkg update
-opkg install luci-theme-argon
+opkg install  luci-theme-argon qemu-ga ipset ipt2socks iptables iptables-mod-conntrack-extra iptables-mod-iprange iptables-mod-socket iptables-mod-tproxy kmod-ipt-nat luci-app-passwall luci-i18n-passwall-zh-cn usbutils kmod-rtl8192cu usbutils wireless-tools kmod-mac80211 kmod-cfg80211 hostapd-common wpad-openssl
 
-opkg install ipset ipt2socks iptables iptables-mod-conntrack-extra iptables-mod-iprange iptables-mod-socket iptables-mod-tproxy kmod-ipt-nat luci-app-passwall
- 
-opkg install usbutils
- 
-opkg install kmod-rtl8192cu wpad-openssl
+uci set wireless.radio0.disabled='0'
+uci commit wireless
+wifi up
 
 六、PASSWALL设置
 1、新增节点  
