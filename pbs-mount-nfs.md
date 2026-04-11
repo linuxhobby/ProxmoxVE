@@ -7,37 +7,48 @@ cp /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js \
 sed -i "s/res.data.status.toLowerCase() !== 'active'/false/" \
   /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
 
+######## 重新来一遍
 
+# PBS 端
 
 1. 安装NFS客户端
 apt-get install nfs-common
 
 2. 创建挂载点
-mkdir -p /mnt/nas_storage
+mkdir -p /mnt/storage_ugreen
 
 3. 测试手动挂载
-mount -t nfs 192.168.2.11:/volume1/storage500GB1 /mnt/nas_storage
-验证是否成功
-df -h | grep nas_storage
-ls /mnt/nas_storage
+mount -t nfs 192.168.2.11:/volume1/storage500GB1 /mnt/storage_ugreen
 
-4. 设置开机自动挂载（/etc/fstab）
+验证是否成功
+df -h | grep storage_ugreen
+
+ls /mnt/storage_ugreen
+
+4. 设置开机自动挂载（/etc/fstab）systemctl daemon-reload
 vi /etc/fstab
 添加：
-192.168.2.11:/volume1/storage500GB1  /mnt/nas_storage  nfs  defaults,_netdev,rw,hard,intr,timeo=30,retrans=3  0  0
+echo "192.168.2.11:/volume1/storage500GB1 /mnt/storage_ugreen nfs vers=3,tcp,rw,nolock,noatime,hard,intr,timeo=30,retrans=3,rsize=32768,wsize=32768 0 0" >> /etc/fstab
+
 关键参数说明：
 _netdev — 等网络就绪后再挂载（PBS服务器重要）
 hard,intr — 网络中断时不丢失任务
 timeo=30 — 超时30秒重试
 retrans=3 — 重试3次
 
-5.PBS Datastore创建成功 nas-storage → /mnt/nas_storage/pbs-datastore
+5.PBS Datastore创建
 # 创建空目录
-mkdir -p /mnt/nas_storage/pbs-datastore
+mkdir -p /mnt/storage_ugreen/pbs-datastore
 # 创建Datastore
-proxmox-backup-manager datastore create nas-storage /mnt/nas_storage/pbs-datastore
-chown -R backup:backup /mnt/nas_storage/pbs-datastore
-chmod -R 755 /mnt/nas_storage/pbs-datastore
+proxmox-backup-manager datastore create storage-ugreen /mnt/storage_ugreen/pbs-datastore
+chown -R backup:backup /mnt/storage_ugreen/pbs-datastore
+chmod -R 755 /mnt/storage_ugreen/pbs-datastore
+
+#移除Datastore
+proxmox-backup-manager datastore remove storage_ugreen
+
+systemctl restart proxmox-backup
+systemctl restart proxmox-backup-proxy
 
 6.PVE Web界面 → 数据中心 → 存储 → 添加 → Proxmox Backup Server
 ID：nas-backup
