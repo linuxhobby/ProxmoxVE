@@ -28,9 +28,9 @@ error()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 # ==============================================================
 
 MENU_ITEMS=(
+    "安装常用工具（curl wget vim net-tools）"
     "设置时区（Asia/Shanghai）"
     "配置 Locale（英文界面 + 中文支持）"
-    "安装常用工具（curl wget vim net-tools）"
     "启用 IPv4/IPv6 转发 + 开启BBR"
     "修改 apt 源为清华镜像源"
     "安装 Docker（官方源 + 清华镜像加速）"
@@ -106,8 +106,18 @@ echo ""
 
 SUMMARY=()
 
-# --- 1. 修改时区 ---
+# --- 1. 安装工具 ---
 if [[ "${SELECTED[0]}" == "1" ]]; then
+    info "安装常用工具..."
+    apt-get install -y -q curl wget vim net-tools ntpsec-ntpdate
+    success "工具安装完成"
+    SUMMARY+=("  安装工具        : curl wget vim net-tools")
+else
+    SUMMARY+=("  安装工具        : 未安装（跳过）")
+fi
+
+# --- 2. 修改时区 ---
+if [[ "${SELECTED[1]}" == "1" ]]; then
     info "设置时区为 Asia/Shanghai ..."
     timedatectl set-timezone Asia/Shanghai
     ntpdate pool.ntp.org
@@ -118,8 +128,8 @@ else
     SUMMARY+=("  时区            : 未修改（跳过）")
 fi
 
-# --- 2. Locale ---
-if [[ "${SELECTED[1]}" == "1" ]]; then
+# --- 3. Locale ---
+if [[ "${SELECTED[2]}" == "1" ]]; then
     info "配置 Locale..."
     apt-get update -qq && apt-get install -y -qq locales
     sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
@@ -130,16 +140,6 @@ if [[ "${SELECTED[1]}" == "1" ]]; then
     SUMMARY+=("  系统语言        : en_US.UTF-8（支持中文）")
 else
     SUMMARY+=("  系统语言        : 未修改（跳过）")
-fi
-
-# --- 3. 安装工具 ---
-if [[ "${SELECTED[2]}" == "1" ]]; then
-    info "安装常用工具..."
-    apt-get install -y -q curl wget vim net-tools ntpsec-ntpdate
-    success "工具安装完成"
-    SUMMARY+=("  安装工具        : curl wget vim net-tools")
-else
-    SUMMARY+=("  安装工具        : 未安装（跳过）")
 fi
 
 # --- 4. 网络优化 ---
