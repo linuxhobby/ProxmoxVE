@@ -59,7 +59,7 @@ Wants=network-online.target
 What=192.168.2.11:/volume1/storage500GB1
 Where=/mnt/storage_ugreen
 Type=nfs
-Options=vers=3,tcp,rw,noatime,soft,timeo=30,retrans=3,retry=0,rsize=32768,wsize=32768
+Options=vers=3,tcp,rw,noatime,hard,timeo=600,retrans=5,retry=0,rsize=32768,wsize=32768
 
 [Install]
 WantedBy=multi-user.target
@@ -188,3 +188,6 @@ systemctl restart proxmox-backup-proxy
 
 - **PBS**：调整精简（Prune）& GC 作业策略
 - **PVE**：设置备份计划（Backup Schedule）
+
+vi /etc/systemd/system/mnt-nfs.automount
+
