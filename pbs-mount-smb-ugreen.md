@@ -1,4 +1,4 @@
-# PBS 挂载群晖 NAS（CIFS/SMB）配置指南
+# PBS 挂载绿联 NAS（CIFS/SMB）配置指南
 
 ---
 
@@ -16,12 +16,12 @@ apt install cifs-utils -y
 # 确保目录存在
 mkdir -p /etc/samba
 
-cat > /etc/samba/pbs-creds-synology << EOF
+cat > /etc/samba/pbs-creds-ugreen << EOF
 username=your_username
 password=your_password
 EOF
 
-chmod 600 /etc/samba/pbs-creds-synology
+chmod 600 /etc/samba/pbs-creds-ugreen
 ```
 
 ---
@@ -29,7 +29,7 @@ chmod 600 /etc/samba/pbs-creds-synology
 ## 步骤 3：创建挂载点
 
 ```bash
-mkdir -p /mnt/storage_synology
+mkdir -p /mnt/storage_ugreen
 ```
 
 ---
@@ -39,7 +39,7 @@ mkdir -p /mnt/storage_synology
 > ⚠️ 必须提前手动创建，PBS 不会自动创建此目录。
 
 ```bash
-mkdir -p /mnt/storage_synology/pbs-datastore
+mkdir -p /mnt/storage_ugreen/pbs-datastore
 ```
 
 ---
@@ -48,7 +48,7 @@ mkdir -p /mnt/storage_synology/pbs-datastore
 
 ```bash
 # 写入 fstab（明确指定 SMB 版本，避免协商失败）
-echo "//192.168.2.12/PVEbackup /mnt/storage_synology cifs credentials=/etc/samba/pbs-creds-synology,vers=3.0,uid=34,gid=34,file_mode=0770,dir_mode=0770,cache=none,_netdev 0 0" >> /etc/fstab
+echo "//192.168.2.11/volume1/storage500GB1 /mnt/storage_ugreen cifs credentials=/etc/samba/pbs-creds-ugreen,vers=3.0,uid=34,gid=34,file_mode=0770,dir_mode=0770,cache=none,_netdev 0 0" >> /etc/fstab
 
 systemctl daemon-reload
 
@@ -69,7 +69,7 @@ mount -a
 
 ```bash
 # 用 backup 用户身份验证权限
-su -s /bin/bash backup -c "ls /mnt/storage_synology"
+su -s /bin/bash backup -c "ls /mnt/storage_ugreen"
 ```
 
 ---
@@ -77,7 +77,7 @@ su -s /bin/bash backup -c "ls /mnt/storage_synology"
 ## 步骤 7：创建 PBS Datastore
 
 ```bash
-proxmox-backup-manager datastore create storage-synology /mnt/storage_synology/pbs-datastore --tuning "gc-atime-safety-check=0"
+proxmox-backup-manager datastore create storage-ugreen /mnt/storage_ugreen/pbs-datastore --tuning "gc-atime-safety-check=0"
 ```
 
 ---
@@ -88,11 +88,11 @@ proxmox-backup-manager datastore create storage-synology /mnt/storage_synology/p
 
 | 字段 | 填写值 |
 |------|--------|
-| ID | `storage-synology` |
+| ID | `storage-ugreen` |
 | 服务器 | `192.168.2.125`（PBS 的 IP） |
 | 用户名 | `root@pam` |
 | 密码 | PBS 的 root 密码 |
-| 数据存储 | `storage-synology` |
+| 数据存储 | `storage-ugreen` |
 
 ---
 
