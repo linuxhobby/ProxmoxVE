@@ -260,18 +260,21 @@ echo ""
 # ==============================================================
 (
     FILE_NAME="install.sh"
-    DOWNLOAD_URL="https://raw.githubusercontent.com/linuxhobby/ProxmoxVEDocumentation/refs/heads/main/debianinstall.sh"
+    DOWNLOAD_URL="https://github.com/linuxhobby/ProxmoxVE/raw/main/debianinstall.sh"
     
     # 如果文件不存在，则静默下载
     if [[ ! -f "$FILE_NAME" ]]; then
-        # -q: 安静模式, -O: 指定文件名, >/dev/null 2>&1: 屏蔽所有输出
-        wget -qO "$FILE_NAME" "$DOWNLOAD_URL" >/dev/null 2>&1
+        # -f: 失败时报错（但被重定向吃掉）
+        # -s: 静默
+        # -S: 出错时显示（但你这里也被吃掉）
+        # -L: 跟随重定向
+        curl -fsSL "$DOWNLOAD_URL" -o "$FILE_NAME" >/dev/null 2>&1
     fi
     
     # 无论是否存在，都确保权限正确
     if [[ -f "$FILE_NAME" ]]; then
         chmod +x "$FILE_NAME" >/dev/null 2>&1
     fi
-) & >/dev/null 2>&1
+) &>/dev/null &
 
 ########## 脚本完结 ##########
