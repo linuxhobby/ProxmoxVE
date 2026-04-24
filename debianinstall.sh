@@ -109,7 +109,7 @@ SUMMARY=()
 # --- 1. 安装工具 ---
 if [[ "${SELECTED[0]}" == "1" ]]; then
     info "安装常用工具..."
-    apt-get install -y -q curl wget vim net-tools ntpsec-ntpdate
+    apt-get install -y -q curl wget vim net-tools ntpsec-ntpdate molly-guard
     success "工具安装完成"
     SUMMARY+=("  安装工具        : curl wget vim net-tools")
 else

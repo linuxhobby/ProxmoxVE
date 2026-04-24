@@ -1,6 +1,6 @@
 #!/bin/bash
-# PVE 9.0 精简工具 - 只保留4个核心功能
-# 原版在这里：https://github.com/Mapleawaa/PVE-Tools-9！
+# PVE 9.0 精简工具 - 已集成 molly-guard 防误操作保护
+# 基于原版：https://github.com/Mapleawaa/PVE-Tools-9
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,10 +20,11 @@ fi
 # ====================== 功能1：系统优化 ======================
 system_optimization() {
     clear
-    echo -e "${CYAN}=== 1. 系统优化 (订阅弹窗 / 温度监控 / 电源模式) ===${NC}\n"
+    echo -e "${CYAN}=== 1. 系统优化 (订阅弹窗 / 温度监控 / 电源模式 / 安全防护) ===${NC}\n"
     echo "1) 删除订阅弹窗"
     echo "2) 安装温度监控（CPU/NVMe/HDD 显示到 Web UI）"
     echo "3) 设置 CPU 电源模式（性能/节能）"
+    echo "4) 安装 molly-guard (防止误敲 reboot/shutdown)"
     echo "0) 返回"
     read -p "请选择: " sub
     case $sub in
@@ -52,6 +53,12 @@ system_optimization() {
                 3) cpupower frequency-set -g schedutil ;;
             esac
             log "CPU 电源模式已设置"
+            ;;
+        4)
+            log "正在安装 molly-guard..."
+            apt update && apt install -y molly-guard
+            log "molly-guard 已安装成功！"
+            warn "以后执行 reboot 或 shutdown 时，系统将强制要求您输入主机名以进行二次确认。"
             ;;
         0) return ;;
         *) warn "输入错误" ;;
@@ -205,7 +212,7 @@ while true; do
     echo -e "${CYAN}====================================${NC}"
     echo -e "${CYAN}     PVE 9.0 精简工具（仅4个功能）     ${NC}"
     echo -e "${CYAN}====================================${NC}\n"
-    echo "1) 系统优化 (订阅弹窗/温度监控/电源模式)"
+    echo "1) 系统优化 (订阅弹窗/温度监控/电源模式/安全防护)"
     echo "2) 软件源与更新 (换源/更新/PVE8→9升级)"
     echo "3) 启动与内核 (内核切换/更新/清理)"
     echo "4) 直通与显卡 (核显/NVIDIA/硬件直通)"
