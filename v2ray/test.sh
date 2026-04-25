@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # ====================================================
-# 将军阁下的专属 V2Ray 独立安装脚本 (UI 完美定制版)
+# 将军阁下的专属 V2Ray 综合管理脚本
+# 功能：安装、查看、增加用户、彻底卸载
 # ====================================================
 
 RED='\033[0;31m'
@@ -10,115 +11,156 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+CONFIG_FILE="/usr/local/etc/v2ray/config.json"
+CADDY_FILE="/etc/caddy/Caddyfile"
+
 [[ $EUID -ne 0 ]] && echo -e "${RED}错误: 必须使用 root 权限运行!${NC}" && exit 1
 
-# 1. 协议选择
-clear
-echo -e "${YELLOW}请选择要部署的协议：${NC}"
-echo -e "1) vless"
-echo -e "2) vmess"
-read -p "请输入数字 [1-2]: " PROTO_CHOICE
+# --- 内部功能函数 ---
 
-case $PROTO_CHOICE in
-    2) PROTOCOL="vmess" ;;
-    *) PROTOCOL="vless" ;;
-esac
+# 生成分享链接并显示
+generate_output() {
+    local uuid=$1
+    local domain=$2
+    local path=$3
+    local proto=$4
+    local safe_path=$(echo -n "$path" | sed 's/\//%2F/g')
 
-read -p "请输入您的解析域名 (例如: cc.myvpsworld.top): " DOMAIN
-[[ -z "$DOMAIN" ]] && echo -e "${RED}域名不能为空！${NC}" && exit 1
+    if [[ "$proto" == "vless" ]]; then
+        URL="vless://$uuid@$domain:443?encryption=none&security=tls&type=ws&host=$domain&path=$safe_path#vpn-ws-$domain"
+    else
+        VMESS_JSON=$(cat <<EOF
+{ "v": "2", "ps": "vpn-ws-$domain", "add": "$domain", "port": "443", "id": "$uuid", "aid": "0", "net": "ws", "type": "none", "host": "$domain", "path": "$path", "tls": "tls" }
+EOF
+        )
+        URL="vmess://$(echo -n "$VMESS_JSON" | base64 -w 0)#$domain"
+    fi
 
-echo -e "${GREEN}正在准备环境...${NC}"
-ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-apt update && apt install -y curl wget jq uuid-runtime debian-keyring debian-archive-keyring apt-transport-https vnstat
+    echo -e "-------------------------------------------------------"
+    echo -e "协议 (protocol) \t= ${BLUE}${proto}${NC}"
+    echo -e "地址 (address) \t\t= ${BLUE}${domain}${NC}"
+    echo -e "端口 (port) \t\t= ${BLUE}443${NC}"
+    echo -e "用户ID (id) \t\t= ${BLUE}${uuid}${NC}"
+    echo -e "传输协议 (network) \t= ${BLUE}ws${NC}"
+    echo -e "伪装域名 (host) \t= ${BLUE}${domain}${NC}"
+    echo -e "路径 (path) \t\t= ${BLUE}${path}${NC}"
+    echo -e "传输层安全 (TLS) \t= ${BLUE}tls${NC}"
+    echo -e "------------- 链接 (URL) -------------"
+    echo -e "${RED}${URL}${NC}"
+    echo -e "-------------------------------------------------------"
+}
 
-# 2. 安装核心与 Caddy
-echo -e "${GREEN}安装 V2Ray 官方核心...${NC}"
-bash <(curl -L https://raw.githubusercontent.com/v2fly/fscript/master/install-release.sh)
+# --- 核心菜单功能 ---
 
-echo -e "${GREEN}安装 Caddy 2...${NC}"
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-apt update && apt install caddy -y
+# 1. 安装功能
+install_v2ray() {
+    echo -e "${YELLOW}请选择协议：1) vless (推荐)  2) vmess${NC}"
+    read -p "选择 [1-2]: " p_choice
+    [[ "$p_choice" == "2" ]] && PROTO="vmess" || PROTO="vless"
+    
+    read -p "请输入域名: " DOMAIN
+    [[ -z "$DOMAIN" ]] && return
 
-# 3. 参数生成
-UUID=$(uuidgen)
-WSPATH="/$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 10)"
+    echo -e "${GREEN}正在安装核心与Caddy...${NC}"
+    apt update && apt install -y curl wget jq uuid-runtime caddy vnstat
+    bash <(curl -L https://raw.githubusercontent.com/v2fly/fscript/master/install-release.sh)
 
-# 4. 配置文件写入
-mkdir -p /usr/local/etc/v2ray
-cat <<EOF > /usr/local/etc/v2ray/config.json
+    UUID=$(uuidgen)
+    WSPATH="/$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 10)"
+
+    mkdir -p /usr/local/etc/v2ray
+    cat <<EOF > $CONFIG_FILE
 {
   "inbounds": [{
-    "port": 10000,
-    "listen":"127.0.0.1",
-    "protocol": "$PROTOCOL",
-    "settings": {
-      "clients": [{"id": "$UUID" $( [[ "$PROTOCOL" == "vless" ]] && echo ',"decryption": "none"' ) }]
-    },
-    "streamSettings": {
-      "network": "ws",
-      "wsSettings": {"path": "$WSPATH"}
-    }
+    "port": 10000, "listen":"127.0.0.1", "protocol": "$PROTO",
+    "settings": { "clients": [{"id": "$UUID" $( [[ "$PROTO" == "vless" ]] && echo ',"decryption": "none"' ) }] },
+    "streamSettings": { "network": "ws", "wsSettings": {"path": "$WSPATH"} }
   }],
   "outbounds": [{"protocol": "freedom"}]
 }
 EOF
 
-# 5. Caddyfile 写入
-cat <<EOF > /etc/caddy/Caddyfile
+    cat <<EOF > $CADDY_FILE
 $DOMAIN {
     reverse_proxy $WSPATH localhost:10000
-    file_server {
-        root /var/www/html
-    }
+    file_server { root /var/www/html }
 }
 EOF
-
-# 6. 服务重启
-cat <<EOF > /etc/systemd/system/v2ray.service
+    
+    # 强制创建服务文件
+    cat <<EOF > /etc/systemd/system/v2ray.service
 [Unit]
 Description=V2Ray Service
-After=network.target nss-lookup.target
+After=network.target
 [Service]
 User=root
-ExecStart=/usr/local/bin/v2ray run -c /usr/local/etc/v2ray/config.json
+ExecStart=/usr/local/bin/v2ray run -c $CONFIG_FILE
 Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable v2ray caddy
-systemctl restart v2ray caddy
-
-# 7. 链接生成逻辑
-SAFE_PATH=$(echo -n "$WSPATH" | sed 's/\//%2F/g')
-
-if [[ "$PROTOCOL" == "vless" ]]; then
-    URL="vless://$UUID@$DOMAIN:443?encryption=none&security=tls&type=ws&host=$DOMAIN&path=$SAFE_PATH#vpn-ws-$DOMAIN"
-else
-    VMESS_JSON=$(cat <<EOF
-{
-  "v": "2", "ps": "vpn-ws-$DOMAIN", "add": "$DOMAIN", "port": "443", "id": "$UUID",
-  "aid": "0", "net": "ws", "type": "none", "host": "$DOMAIN", "path": "$WSPATH", "tls": "tls"
+    systemctl daemon-reload && systemctl enable v2ray caddy && systemctl restart v2ray caddy
+    generate_output "$UUID" "$DOMAIN" "$WSPATH" "$PROTO"
 }
-EOF
-    )
-    URL="vmess://$(echo -n "$VMESS_JSON" | base64 -w 0)#$DOMAIN"
-fi
 
-# 8. 格式化输出安装结果
-clear
-echo -e "${GREEN}V2Ray 安装成功！${NC}"
-echo -e "-------------------------------------------------------"
-echo -e "协议 (protocol) \t= ${BLUE}${PROTOCOL}${NC}"
-echo -e "地址 (address) \t\t= ${BLUE}${DOMAIN}${NC}"
-echo -e "端口 (port) \t\t= ${BLUE}443${NC}"
-echo -e "用户ID (id) \t\t= ${BLUE}${UUID}${NC}"
-echo -e "传输协议 (network) \t= ${BLUE}ws${NC}"
-echo -e "伪装域名 (host) \t= ${BLUE}${DOMAIN}${NC}"
-echo -e "路径 (path) \t\t= ${BLUE}${WSPATH}${NC}"
-echo -e "传输层安全 (TLS) \t= ${BLUE}tls${NC}"
-echo -e "------------- 链接 (URL) -------------"
-echo -e "${RED}${URL}${NC}"
-echo -e "-------------------------------------------------------"
+# 2. 查看配置
+show_config() {
+    if [[ ! -f $CONFIG_FILE ]]; then
+        echo -e "${RED}未检测到安装配置！${NC}"
+        return
+    fi
+    local proto=$(jq -r '.inbounds[0].protocol' $CONFIG_FILE)
+    local domain=$(grep -v "{" $CADDY_FILE | head -n 1 | awk '{print $1}')
+    local path=$(jq -r '.inbounds[0].streamSettings.wsSettings.path' $CONFIG_FILE)
+    
+    echo -e "${YELLOW}当前配置中的所有用户：${NC}"
+    local count=$(jq '.inbounds[0].settings.clients | length' $CONFIG_FILE)
+    for ((i=0; i<$count; i++)); do
+        local uuid=$(jq -r ".inbounds[0].settings.clients[$i].id" $CONFIG_FILE)
+        echo -e "用户 $((i+1)):"
+        generate_output "$uuid" "$domain" "$path" "$proto"
+    done
+}
+
+# 3. 增加用户
+add_user() {
+    [[ ! -f $CONFIG_FILE ]] && echo -e "${RED}请先安装！${NC}" && return
+    local new_uuid=$(uuidgen)
+    jq ".inbounds[0].settings.clients += [{\"id\": \"$new_uuid\" $(jq -r '.inbounds[0].protocol' $CONFIG_FILE | grep -q vless && echo ',"decryption": "none"') }]" $CONFIG_FILE > ${CONFIG_FILE}.tmp && mv ${CONFIG_FILE}.tmp $CONFIG_FILE
+    systemctl restart v2ray
+    echo -e "${GREEN}用户添加成功！${NC}"
+    show_config
+}
+
+# 4. 删除配置 (卸载)
+uninstall_v2ray() {
+    read -p "确定要彻底删除 V2Ray 和 Caddy 吗？(y/n): " confirm
+    if [[ "$confirm" == "y" ]]; then
+        systemctl stop v2ray caddy
+        systemctl disable v2ray caddy
+        rm -rf /usr/local/etc/v2ray /usr/local/bin/v2ray /etc/caddy /etc/systemd/system/v2ray.service
+        echo -e "${GREEN}卸载完成！${NC}"
+    fi
+}
+
+# --- 主菜单 ---
+while true; do
+    echo -e "${YELLOW}=================================${NC}"
+    echo -e "${GREEN}   将军阁下的 V2Ray 管理面板 ${NC}"
+    echo -e "${YELLOW}=================================${NC}"
+    echo -e "1) 安装 V2Ray (全新配置)"
+    echo -e "2) 查看当前配置与链接"
+    echo -e "3) 增加新用户 (多UUID)"
+    echo -e "4) 彻底卸载 (删除所有配置)"
+    echo -e "q) 退出"
+    read -p "请选择操作: " opt
+    case $opt in
+        1) install_v2ray ;;
+        2) show_config ;;
+        3) add_user ;;
+        4) uninstall_v2ray ;;
+        q) exit 0 ;;
+        *) echo -e "${RED}无效选项${NC}" ;;
+    esac
+done
