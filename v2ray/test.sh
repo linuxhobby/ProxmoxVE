@@ -1,111 +1,104 @@
 #!/bin/bash
 
-# ====================================================
-# 将军阁下的专属 V2Ray 综合管理脚本 (Debian 12 核心加固版)
-# ====================================================
+# --- 1. 环境初始化 ---
+apt update && apt install -y curl wget jq uuid-runtime unzip net-tools
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# --- 2. 参数设定 (请根据需要修改域名) ---
+DOMAIN="rc.myvpsworld.top"
+UUID="db475d79-722b-403c-9428-af30c9c4642e"
+WSPATH="/y0zytjud6p"
+PORT=10000
 
-# 定义关键路径
-V2RAY_BIN="/usr/local/bin/v2ray"
-V2RAY_CONF_DIR="/usr/local/etc/v2ray"
-CONFIG_FILE="$V2RAY_CONF_DIR/config.json"
-CADDY_CONF_DIR="/etc/caddy"
-CADDY_FILE="$CADDY_CONF_DIR/Caddyfile"
+# --- 3. 安装 V2Ray 5.x 核心 ---
+mkdir -p /usr/local/bin /etc/v2ray /var/www/html
+latest_version=$(curl -s https://api.github.com/repos/v2fly/v2ray-core/releases/latest | jq -r .tag_name)
+wget -q -O /tmp/v2ray.zip "https://github.com/v2fly/v2ray-core/releases/download/${latest_version}/v2ray-linux-64.zip"
+unzip -o /tmp/v2ray.zip -d /tmp/v2ray_tmp
+cp /tmp/v2ray_tmp/v2ray /usr/local/bin/
+chmod +x /usr/local/bin/v2ray
+rm -rf /tmp/v2ray.zip /tmp/v2ray_tmp
 
-# 1. 环境肃清与准备
-prepare_env() {
-    echo -e "${YELLOW}正在清理环境并安装基础组件...${NC}"
-    apt update && apt upgrade -y
-    # 彻底移除可能占用的 Apache2 或 Nginx
-    apt purge apache2* nginx* bind9* -y
-    apt autoremove -y
-    
-    # 安装必要工具
-    apt install -y curl wget jq uuid-runtime caddy vnstat unzip libcap2-bin
-    
-    # 强制创建目录
-    mkdir -p $V2RAY_CONF_DIR
-    mkdir -p $CADDY_CONF_DIR
-    mkdir -p /var/www/html
-    
-    # 停止服务防止冲突
-    systemctl stop v2ray caddy 2>/dev/null
-}
-
-# 2. 安装 V2Ray 核心 (手动部署，避开失效链接)
-install_core() {
-    echo -e "${GREEN}正在从 GitHub 官方抓取最新 V2Ray 核心...${NC}"
-    local latest_version=$(curl -s https://api.github.com/repos/v2fly/v2ray-core/releases/latest | jq -r .tag_name)
-    echo -e "${BLUE}检测到最新版本: $latest_version${NC}"
-    
-    wget -q -O /tmp/v2ray.zip "https://github.com/v2fly/v2ray-core/releases/download/${latest_version}/v2ray-linux-64.zip"
-    
-    if [[ ! -f /tmp/v2ray.zip ]]; then
-        echo -e "${RED}错误：下载核心包失败，请检查网络！${NC}"
-        exit 1
-    fi
-    
-    unzip -o /tmp/v2ray.zip -d /tmp/v2ray_tmp
-    cp /tmp/v2ray_tmp/v2ray /usr/local/bin/
-    chmod +x /usr/local/bin/v2ray
-    rm -rf /tmp/v2ray.zip /tmp/v2ray_tmp
-    echo -e "${GREEN}V2Ray 核心安装成功。${NC}"
-}
-
-# 3. 写入配置并启动
-write_config() {
-    local domain=$1
-    local uuid=$(uuidgen)
-    local wspath="/$(head /dev/urandom | tr -dc 'a-z0-9' | head -c 10)"
-
-    # 写入 V2Ray 配置 (锁定 IPv4 内部回环)
-    cat <<EOF > $CONFIG_FILE
+# --- 4. 写入 V5 标准配置文件 (借鉴 233boy 的精密结构) ---
+cat <<EOF > /etc/v2ray/config.json
 {
-  "inbounds": [{
-    "port": 10000, "listen":"127.0.0.1", "protocol": "vless",
-    "settings": { "clients": [{"id": "$uuid", "decryption": "none"}] },
-    "streamSettings": { "network": "ws", "wsSettings": {"path": "$wspath"} }
-  }],
-  "outbounds": [{"protocol": "freedom"}]
+  "inbounds": [
+    {
+      "port": $PORT,
+      "listen": "127.0.0.1",
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "$UUID",
+            "decryption": "none"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "$WSPATH"
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    }
+  ]
 }
 EOF
 
-    # 写入 Caddyfile (强制 bind 0.0.0.0 实现双栈容错)
-    cat <<EOF > $CADDY_FILE
-$domain {
-    bind 0.0.0.0
-    reverse_proxy $wspath localhost:10000
-    file_server { root /var/www/html }
+# --- 5. 安装并配置 Caddy ---
+if ! command -v caddy &> /dev/null; then
+    apt install -y debian-keyring debian-archive-keyring apt-transport-https
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+    apt update && apt install caddy -y
+fi
+
+cat <<EOF > /etc/caddy/Caddyfile
+$DOMAIN {
+    reverse_proxy $WSPATH localhost:$PORT
+    file_server {
+        root /var/www/html
+    }
 }
 EOF
 
-    # 写入 Systemd 服务
-    cat <<EOF > /etc/systemd/system/v2ray.service
+# --- 6. 写入 Systemd 服务 ---
+cat <<EOF > /etc/systemd/system/v2ray.service
 [Unit]
 Description=V2Ray Service
-After=network.target
+After=network.target nss-lookup.target
+
 [Service]
 User=root
-ExecStart=/usr/local/bin/v2ray run -c $CONFIG_FILE
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ExecStart=/usr/local/bin/v2ray run -c /etc/v2ray/config.json
 Restart=on-failure
+RestartSec=5
+
 [Install]
 WantedBy=multi-user.target
 EOF
 
-    # 授予 Caddy 绑定端口权限
-    setcap 'cap_net_bind_service=+ep' $(which caddy)
+# --- 7. 发起总攻 ---
+systemctl daemon-reload
+systemctl enable v2ray caddy
+systemctl restart v2ray caddy
 
-    systemctl daemon-reload
-    systemctl enable v2ray caddy
-    systemctl restart v2ray caddy
-    
-    echo -e "\n${GREEN}========== 部署成功 ==========${NC}"
-    echo -e "域名: ${BLUE}$domain${NC}"
-    echo -e "UUID: ${BLUE}$uuid${NC}"
-    echo -e "路径: ${BLUE}$wspath${NC}"
-    echo -e "端口: ${BLUE}443${NC}"
+# --- 8. 战果汇报 ---
+echo "--------------------------------------------------"
+echo "部署完成，将军阁下！"
+echo "域名: $DOMAIN"
+echo "端口: 443"
+echo "UUID: $UUID"
+echo "路径: $WSPATH"
+echo "传输: WebSocket + TLS"
+echo "--------------------------------------------------"
+netstat -tulpn | grep :$PORT
