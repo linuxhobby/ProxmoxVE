@@ -1,75 +1,88 @@
 #!/bin/bash
 
 # ====================================================
-# 将军阁下，这是针对 Debian 12 纯净版环境的最终优化脚本
-# 解决：awk 虚拟包报错、URL 编码、DNS 解析撤销错误
+# 将军阁下，这是修正了语法闭合问题的 V3.2 脚本
+# 修复：EOF 标记对齐、循环闭合、Debian 12 环境包名
 # ====================================================
 
 CONFIG_FILE="/etc/v2ray/config.json"
 
-# --- 1. 强制环境对齐 (不再请求虚拟包) ---
+# --- 1. 环境准备 ---
 prepare_env() {
-    echo "正在执行环境标准化逻辑..."
-    # 显式安装 gawk 而非 awk，显式安装 python3 处理 URL 编码
+    echo "正在安装必要依赖..."
     apt update && apt install -y curl jq gawk grep base64 python3-minimal
-    
     if ! command -v v2ray &> /dev/null; then
-        echo "检测到核心组件缺失，正在启动安装程序..."
-        # 此处使用您之前保存的安装脚本逻辑
-        wget -N --no-check-certificate -q -O install.sh "https://raw.githubusercontent.com/wulabing/V2Ray_ws-tls_bash_onekey/master/install.sh" && chmod +x install.sh && bash install.sh
+        echo "正在安装 V2Ray 核心..."
+        bash <(curl -s -L https://git.io/v2ray.sh)
     fi
 }
 
-# --- 2. 深度注入优化配置 (针对 operation was canceled 报错) ---
-apply_optimized_config() {
-    local PROTOCOL=$1
+# --- 2. 写入配置 ---
+apply_config() {
+    local PROTO=$1
     local UUID=$2
-    local WSPATH=$3
+    local PATH_STR=$3
 
-    # 注入关键优化：AsIs 策略、IPv4 优先、延长握手时间
-    cat > $CONFIG_FILE << EOF
+    # 注意：EOF 后面不能有任何空格
+    cat > $CONFIG_FILE <<EOF
 {
   "log": { "loglevel": "warning" },
-  "dns": { 
-    "servers": ["localhost"], 
-    "queryStrategy": "UseIPv4" 
-  },
-  "policy": { 
-    "levels": { "0": { "handshake": 5, "connIdle": 300 } } 
-  },
+  "dns": { "servers": ["localhost"], "queryStrategy": "UseIPv4" },
+  "policy": { "levels": { "0": { "handshake": 5, "connIdle": 300 } } },
   "inbounds": [{
     "port": 12345,
     "listen": "127.0.0.1",
-    "protocol": "$PROTOCOL",
-    "settings": {
-      "clients": [ { "id": "$UUID", "level": 0 } ],
-      "decryption": "none"
-    },
-    "streamSettings": {
-      "network": "ws",
-      "wsSettings": { "path": "$WSPATH" }
-    }
+    "protocol": "$PROTO",
+    "settings": { "clients": [ { "id": "$UUID", "level": 0 } ], "decryption": "none" },
+    "streamSettings": { "network": "ws", "wsSettings": { "path": "$PATH_STR" } }
   }],
-  "outbounds": [
-    { 
-      "protocol": "freedom", 
-      "settings": { "domainStrategy": "UseIPv4" } 
-    }
-  ]
+  "outbounds": [{ "protocol": "freedom", "settings": { "domainStrategy": "UseIPv4" } }]
 }
 EOF
     systemctl restart v2ray
-    echo "优化配置已生效，服务已重启。"
 }
 
-# --- 3. 精准链接生成逻辑 ---
+# --- 3. 生成链接 ---
 output_links() {
-    [ ! -f "$CONFIG_FILE" ] && return
+    if [ ! -f "$CONFIG_FILE" ]; then echo "配置文件不存在！"; return; fi
     
     local PROTO=$(jq -r '.inbounds[0].protocol' $CONFIG_FILE)
     local ID=$(jq -r '.inbounds[0].settings.clients[0].id' $CONFIG_FILE)
-    local PATH_RAW=$(jq -r '.inbounds[0].streamSettings.wsSettings.path' $CONFIG_FILE)
-    
-    # 动态抓取域名 (针对 233boy 或 Wulabing 环境)
+    local PR=$(jq -r '.inbounds[0].streamSettings.wsSettings.path' $CONFIG_FILE)
     local ADDR=$(hostname -f)
-    # 使用 Python3
+    local P_ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$PR', safe=''))")
+    
+    echo "-----------------------------------------------"
+    if [ "$PROTO" == "vless" ]; then
+        echo "VLESS 链接: vless://${ID}@${ADDR}:443?encryption=none&security=tls&type=ws&host=${ADDR}&path=${P_ENC}#Racknerd_V3"
+    else
+        local VM_J=$(cat <<EOF
+{ "v": "2", "ps": "Racknerd_V3", "add": "${ADDR}", "port": "443", "id": "${ID}", "aid": "0", "net": "ws", "type": "none", "host": "${ADDR}", "path": "${PR}", "tls": "tls" }
+EOF
+)
+        echo "VMess 链接: vmess://$(echo -n "$VM_J" | base64 -w 0)"
+    fi
+    echo "-----------------------------------------------"
+}
+
+# --- 4. 主循环 ---
+while true; do
+    echo "1) 部署 VLESS-WS-TLS"
+    echo "2) 部署 VMess-WS-TLS"
+    echo "3) 查看链接"
+    echo "4) 清理并退出"
+    read -p "选择 [1-4]: " opt
+    case \$opt in
+        1|2)
+            prepare_env
+            P="vless"; [ "\$opt" == "2" ] && P="vmess"
+            U=\$(cat /proc/sys/kernel/random/uuid)
+            W="/ray\$(cat /proc/sys/kernel/random/uuid | cut -c1-4)"
+            apply_config "\$P" "\$U" "\$W"
+            output_links
+            ;;
+        3) output_links ;;
+        4) exit 0 ;;
+        *) echo "无效选项" ;;
+    esac
+done
