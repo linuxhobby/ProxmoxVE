@@ -6,12 +6,13 @@ qm importdisk 100 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-64-generic-ex
 
 qm importdisk 900 /var/lib/vz/template/iso/immortalwrt-23.05.7-x86-64-generic-ext4-combined-efi-2g-swap.img local-lvm
 
+openWRT:  
+qm importdisk 600  /var/lib/vz/template/iso/openwrt-23.05.6-x86-64-generic-ext4-combined-efi.img local-lvm
 二、修改/etc/config/network，lan ip=192.168.2.1，service network restart
 
 三、修改源：
 方法1:
 sed -e 's,https://downloads.immortalwrt.org,https://mirrors.zju.edu.cn/immortalwrt,g'  -e 's,https://mirrors.vsean.net/openwrt,https://mirrors.zju.edu.cn/immortalwrt,g' -i.bak /etc/opkg/distfeeds.conf  
-    
 方法2：直接在【系统】【软件包】【配置opkg】替换修改
 src/gz immortalwrt_core https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/targets/x86/64/packages
 src/gz immortalwrt_base https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/base
@@ -20,7 +21,10 @@ src/gz immortalwrt_luci https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/
 src/gz immortalwrt_packages https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/packages
 src/gz immortalwrt_routing https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/routing
 src/gz immortalwrt_telephony https://mirrors.zju.edu.cn/immortalwrt/releases/23.05.7/packages/x86_64/telephony
-  
+
+
+openWTR:  
+sed -i 's_https\?://downloads.openwrt.org_https://mirrors.tuna.tsinghua.edu.cn/openwrt_' /etc/opkg/distfeeds.conf
 四、增加交换分区
 dd if=/dev/zero of=/overlay/swapfile bs=1M count=512
 chmod 600 /overlay/swapfile
