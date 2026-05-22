@@ -28,7 +28,7 @@ get_tailscale_status() {
 
 # 依赖检查
 command_exists() { command -v "$1" >/dev/null 2>&1; }
-if ! command_exists curl; then apt-get update && apt-get install -y curl; fi
+if ! command_exists curl; then apt-get update && apt-get install -y curl jq; fi
 
 pause() { echo ""; read -p "按下回车键返回主菜单..." ; }
 
@@ -47,7 +47,7 @@ check_tailscale_installed() {
 
 # 检查是否真正开启了 Exit Node 广播
 check_exit_node() {
-    if tailscale status --json 2>/dev/null | grep -q '"ExitNode":true'; then
+    if tailscale debug prefs 2>/dev/null | jq -e '.AdvertiseExitNode == true' >/dev/null; then
         echo -e "${GREEN}[已开启]${NC}"
     else
         echo -e "${RED}[未开启]${NC}"
@@ -56,7 +56,7 @@ check_exit_node() {
 
 # 检查是否真正开启了子网路由广播
 check_subnet_route() {
-    if tailscale status --json 2>/dev/null | grep -q '"advertisingRoutes":\["'; then
+    if tailscale debug prefs 2>/dev/null | jq -e '.AdvertiseRoutes | length > 0' >/dev/null; then
         echo -e "${GREEN}[已配置]${NC}"
     else
         echo -e "${RED}[未配置]${NC}"
@@ -81,8 +81,8 @@ update_tailscale_config() {
 install_tailscale() {
     # 强制检查仓库健康
     if ! apt-get update >/dev/null 2>&1; then
-        echo -e "${RED}检测到仓库存在损坏，正在尝试清理第三方源...${NC}"
-        rm -f /etc/apt/sources.list.d/*.list  # 注意：这会清理所有第三方源
+        echo -e "${RED}检测到 Tailscale 源可能异常，正在清理...${NC}"
+        find /etc/apt/sources.list.d/ -type f | grep -i tailscale | xargs rm -f
         apt-get update
     fi
 
@@ -113,17 +113,28 @@ apply_tailscale_config() {
     ip rule add from "$ip_addr" lookup main pref 100 2>/dev/null
     
     # 构造命令：Accept-routes 必须开启以防止路由失效，SNAT 保证转发稳定性
-    local cmd="tailscale up --accept-routes --snat-subnet-routes=true"
-    [[ "$enable_exit" == "true" ]] && cmd="$cmd --advertise-exit-node"
-    [[ -n "$routes" ]] && cmd="$cmd --advertise-routes=$routes"
-    
-    echo "正在执行配置: $cmd"
-    eval $cmd
+    local cmd=(
+    tailscale up
+    --accept-routes
+    --snat-subnet-routes=true
+    )
+
+    [[ "$enable_exit" == "true" ]] && cmd+=(--advertise-exit-node)
+    [[ -n "$routes" ]] && cmd+=(--advertise-routes="$routes")
+
+echo "正在执行配置: ${cmd[*]}"
+"${cmd[@]}"
 }
 
 setup_exit_node() {
     echo "正在配置出口节点模式..."
-    sudo ethtool -K ens18 rx-udp-gro-forwarding on 2>/dev/null
+    NIC=$(ip route get 8.8.8.8 | awk '{print $5; exit}')
+    if [[ -n "$NIC" ]]; then
+        echo "检测到主网卡: $NIC"
+    ethtool -K "$NIC" rx-udp-gro-forwarding on 2>/dev/null \
+        && echo "UDP GRO 已开启" \
+        || echo "UDP GRO 开启失败（可能网卡不支持）"
+    fi
     
     # 获取当前路由以保持不变
     local current_routes=$(tailscale status --json 2>/dev/null | grep -o '"advertisedRoutes":\[.*\]' | cut -d'[' -f2 | cut -d']' -f1 | sed 's/"//g')
