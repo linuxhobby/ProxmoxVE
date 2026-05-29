@@ -28,7 +28,12 @@ get_tailscale_status() {
 
 # 依赖检查
 command_exists() { command -v "$1" >/dev/null 2>&1; }
-if ! command_exists curl; then apt-get update && apt-get install -y curl jq; fi
+# 确保必要的工具已安装
+if ! command_exists curl || ! command_exists jq; then 
+    apt-get update >/dev/null 2>&1
+    ! command_exists curl && apt-get install -y curl
+    ! command_exists jq && apt-get install -y jq
+fi
 
 pause() { echo ""; read -p "按下回车键返回主菜单..." ; }
 
@@ -47,7 +52,7 @@ check_tailscale_installed() {
 
 # 检查是否真正开启了 Exit Node 广播
 check_exit_node() {
-    if tailscale debug prefs 2>/dev/null | jq -e '.AdvertiseExitNode == true' >/dev/null; then
+    if tailscale debug prefs 2>/dev/null | grep -q '"AdvertiseExitNode": true'; then
         echo -e "${GREEN}[已开启]${NC}"
     else
         echo -e "${RED}[未开启]${NC}"
@@ -56,7 +61,7 @@ check_exit_node() {
 
 # 检查是否真正开启了子网路由广播
 check_subnet_route() {
-    if tailscale debug prefs 2>/dev/null | jq -e '.AdvertiseRoutes | length > 0' >/dev/null; then
+    if tailscale debug prefs 2>/dev/null | grep -q '"AdvertiseRoutes":'; then
         echo -e "${GREEN}[已配置]${NC}"
     else
         echo -e "${RED}[未配置]${NC}"
