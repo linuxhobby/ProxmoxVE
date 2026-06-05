@@ -18,7 +18,10 @@
   - [恢复步骤](#二恢复步骤)
 
 ---
-## Linux Tools脚本包含Debian 13 初始化 + Tailscale 高级管理 + PVE 9.0 精简工具。
+## Linux Tools脚本包含：
+- Debian 13 初始化
+- Tailscale 高级管理
+- PVE 9.0 精简工具。
 ```
 apt update
 apt install curl -y
