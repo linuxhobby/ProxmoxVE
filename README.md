@@ -18,6 +18,11 @@
   - [恢复步骤](#二恢复步骤)
 
 ---
+```
+apt update
+apt install curl -y
+bash <(curl -fsSL https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/refs/heads/main/linux_tools.sh)
+```
 
 ## 安装 Debian 13 后执行自动化脚本
 
