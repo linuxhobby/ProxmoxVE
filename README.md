@@ -33,7 +33,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/refs/he
 ```bash
 apt update
 apt install curl -y
-bash <(curl -fsSL https://raw.githubusercontent.com/linuxhobby/ProxmoxVEDocumentation/refs/heads/main/debianinstall.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/refs/heads/main/debianinstall.sh)
 ```
 
 ---
