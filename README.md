@@ -1,15 +1,18 @@
 # Proxmox Virtual Environment 笔记
 
-> 最后更新：2026/04/07
+> 最后更新：2026/06/20
 
 ---
 
 ## 目录
 
-- [安装 Debian 13 后执行自动化脚本](#安装-debian-13-后执行自动化脚本)
+- [脚本一键安装](#脚本一键安装)
+  - [linux_tools.sh — 整合工具箱](#linux_toolssh--整合工具箱)
+  - [debianinstall.sh — Debian 13 初始化](#debianinstallsh--debian-13-初始化)
+  - [install_tailscale.sh — Tailscale 管理](#install_tailscalesh--tailscale-管理)
+  - [pve-tools.sh — PVE 9.0 工具](#pve-toolssh--pve-90-工具)
 - [PVE Tools 自动化脚本](#pve-tools-自动化脚本)
   - [pve_source](#pve_source)
-  - [pve-tools](#pve-tools)
   - [更改 CT 模板源](#更改-ct-模板源)
   - [关闭订阅弹窗](#关闭订阅弹窗)
 - [虚拟机安装和配置](#虚拟机安装和配置)
@@ -18,22 +21,43 @@
   - [恢复步骤](#二恢复步骤)
 
 ---
-## Linux Tools脚本包含：
-- Debian 13 初始化
-- Tailscale 高级管理
-- PVE 9.0 精简工具。
-```
-apt update
-apt install curl -y
-bash <(curl -fsSL https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/refs/heads/main/linux_tools.sh)
-```
 
-## 安装 Debian 13 后执行自动化脚本
+## 脚本一键安装
+
+所有脚本均使用 `wget` 下载并执行，适用于 Debian 13 / PVE 9.0 环境。
+
+> 前置条件：需要 root 权限，请使用 `su -` 或在命令前加 `sudo`。
+
+### linux_tools.sh — 整合工具箱
+
+整合 Debian 13 初始化 + Tailscale 高级管理 + PVE 9.0 精简工具，三合一。
 
 ```bash
-apt update
-apt install curl -y
-bash <(curl -fsSL https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/refs/heads/main/debianinstall.sh)
+wget -q -O /tmp/linux_tools.sh https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/main/linux_tools.sh && bash /tmp/linux_tools.sh
+```
+
+### debianinstall.sh — Debian 13 初始化
+
+一键完成 Debian 13 系统初始化：时区、Locale、常用工具、IPv4/IPv6 转发、BBR、清华镜像源、Docker、修改主机名。
+
+```bash
+wget -q -O /tmp/debianinstall.sh https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/main/debianinstall.sh && bash /tmp/debianinstall.sh
+```
+
+### install_tailscale.sh — Tailscale 管理
+
+Tailscale 高级管理脚本：安装、配置 Exit Node、子网路由、BBR 加速、IPv4/IPv6 转发。
+
+```bash
+wget -q -O /tmp/install_tailscale.sh https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/main/install_tailscale.sh && bash /tmp/install_tailscale.sh
+```
+
+### pve-tools.sh — PVE 9.0 工具
+
+PVE 9.0 配置工具：换源、删除订阅弹窗、内核管理、硬件直通、NVIDIA GPU、邮件通知等。
+
+```bash
+wget -q -O /tmp/pve-tools.sh https://raw.githubusercontent.com/linuxhobby/ProxmoxVE/main/pve-tools.sh && bash /tmp/pve-tools.sh
 ```
 
 ---
@@ -48,12 +72,6 @@ wget -q -O /root/pve_source.tar.gz 'http://szrq.hkfree.work/pve-source/pve_sourc
   && /root/./pve_source
 ```
 
-### pve-tools
-
-```bash
-bash <(curl -sSL https://ghfast.top/raw.githubusercontent.com/Mapleawaa/PVE-Tools-9/main/PVE-Tools.sh)
-```
-
 ### 更改 CT 模板源
 
 将 CT 模板下载源替换为清华大学镜像：
@@ -64,7 +82,7 @@ sed -i 's|http://download.proxmox.com|https://mirrors.tuna.tsinghua.edu.cn/proxm
   /usr/share/perl5/PVE/APLInfo.pm
 ```
 
-### 关闭订阅弹窗(同样适用关闭【PBS】)  
+### 关闭订阅弹窗(同样适用关闭【PBS】)
 
 ```bash
 sed -Ezi.bak \
