@@ -7536,5 +7536,21 @@ main() {
     done
 }
 
+# ============ 命令行 (非交互) 模式 ============
+# 用法: bash pve-tools.sh <函数名> [参数...]
+# 例如: bash pve-tools.sh cpu_add
+#        bash pve-tools.sh remove_subscription_popup
+#        bash pve-tools.sh reinstall_pve_webui_packages
+# 适合在脚本升级 PVE 后一键重放补丁, 跳过交互菜单与更新检查。
+PVE_TOOLS_CLI_FUNCS="cpu_add cpu_del remove_subscription_popup reinstall_pve_webui_packages restore_proxmoxlib apply_block remove_block grub_add_param grub_remove_param"
+if [[ -n "$1" && " $PVE_TOOLS_CLI_FUNCS " == *" $1 "* ]]; then
+    check_root
+    ensure_legal_acceptance
+    check_pve_version
+    log_info "命令行模式: 直接执行 $*"
+    "$@"
+    exit $?
+fi
+
 # 运行主程序
 main "$@"
